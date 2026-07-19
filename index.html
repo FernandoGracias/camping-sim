@@ -335,11 +335,11 @@ function makeTree(x, z, height, trunkRadius) {
     cone.castShadow = true;
     group.add(cone);
 
-    const capGeo = new THREE.ConeGeometry(layerRadius * 0.95, layerHeight * 0.5, 7);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0 });
+    const capGeo = new THREE.RingGeometry(layerRadius * 0.25, layerRadius * 0.98, 7);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0, side: THREE.DoubleSide });
     const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = layerY + layerHeight * 0.25;
-    cap.rotation.y = cone.rotation.y;
+    cap.rotation.x = -Math.PI / 2;
+    cap.position.y = layerY - layerHeight * 0.48;
     cap.visible = false;
     group.add(cap);
     snowCaps.push(cap);
