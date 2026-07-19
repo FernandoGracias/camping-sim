@@ -286,18 +286,18 @@ scene.add(buildCreek());
 // --- TREES ---
 function makeTree(x, z, height, trunkRadius) {
   const group = new THREE.Group();
-  const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.6, trunkRadius, height * 0.4, 6);
+  const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.5, trunkRadius, height * 0.5, 6);
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e, roughness: 0.9 });
   const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.position.y = height * 0.2;
+  trunk.position.y = height * 0.25;
   trunk.castShadow = true;
   group.add(trunk);
 
-  const foliageLayers = 3 + Math.floor(Math.random() * 2);
+  const foliageLayers = 4 + Math.floor(Math.random() * 3);
   for (let i = 0; i < foliageLayers; i++) {
-    const layerHeight = height * 0.25;
-    const layerRadius = (height * 0.35) * (1 - i * 0.2);
-    const layerY = height * 0.4 + i * layerHeight * 0.6;
+    const layerHeight = height * 0.15;
+    const layerRadius = (height * 0.18) * (1 - i * 0.12);
+    const layerY = height * 0.4 + i * layerHeight * 0.7;
     const coneGeo = new THREE.ConeGeometry(layerRadius, layerHeight, 7);
     const shade = 0.3 + Math.random() * 0.15;
     const coneMat = new THREE.MeshStandardMaterial({
@@ -316,6 +316,24 @@ function makeTree(x, z, height, trunkRadius) {
   return group;
 }
 
+const creekPts = [
+  [-80,12],[-68,10],[-55,5],[-44,4],[-35,6],[-26,10],[-18,12],[-10,10],
+  [-4,7.5],[3,6],[10,8],[18,11],[26,12],[34,10],[42,6],[50,4],[58,5],[66,8],[74,11],[80,12]
+];
+function distToCreek(x, z) {
+  let minDist = Infinity;
+  for (let i = 0; i < creekPts.length - 1; i++) {
+    const ax = creekPts[i][0], az = creekPts[i][1];
+    const bx = creekPts[i+1][0], bz = creekPts[i+1][1];
+    const dx = bx - ax, dz = bz - az;
+    const t = Math.max(0, Math.min(1, ((x-ax)*dx + (z-az)*dz) / (dx*dx + dz*dz)));
+    const px = ax + t*dx, pz = az + t*dz;
+    const d = Math.sqrt((x-px)*(x-px) + (z-pz)*(z-pz));
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
 const treePositions = [];
 for (let i = 0; i < 200; i++) {
   const angle = Math.random() * Math.PI * 2;
@@ -323,10 +341,9 @@ for (let i = 0; i < 200; i++) {
   const x = Math.cos(angle) * dist;
   const z = Math.sin(angle) * dist;
   if (dist < 8 && Math.sqrt(x * x + z * z) < 8) continue;
-  const creekZ = 8 + Math.sin(x * 0.08) * 4;
-  if (Math.abs(z - creekZ) < 3.5) continue;
-  const height = 4 + Math.random() * 5;
-  const radius = 0.15 + Math.random() * 0.15;
+  if (distToCreek(x, z) < 3) continue;
+  const height = 8 + Math.random() * 12;
+  const radius = 0.12 + Math.random() * 0.1;
   const tree = makeTree(x, z, height, radius);
   scene.add(tree);
   treePositions.push({ obj: tree, baseX: x, baseZ: z });
