@@ -1088,16 +1088,25 @@ function animate() {
       const geo = cone.geometry;
       const colors = geo.attributes.color;
       const normals = geo.attributes.normal;
+      const positions = geo.attributes.position;
       const green = cone.material.userData.greenColor;
+      const bbox = geo.boundingBox || (geo.computeBoundingBox(), geo.boundingBox);
+      const minY = bbox.min.y;
+      const maxY = bbox.max.y;
+      const hRange = maxY - minY;
       for (let v = 0; v < normals.count; v++) {
         const ny = normals.getY(v);
-        if (ny > 0.15) {
-          const t = accumulation * Math.min(1, (ny - 0.15) * 2);
+        const py = positions.getY(v);
+        const heightRatio = (py - minY) / hRange;
+        if (ny > 0.15 && heightRatio < 0.6) {
+          const t = accumulation * (1 - heightRatio * 1.2);
           colors.setXYZ(v,
             green.r + (1 - green.r) * t,
             green.g + (1 - green.g) * t,
             green.b + (1 - green.b) * t
           );
+        } else {
+          colors.setXYZ(v, green.r, green.g, green.b);
         }
       }
       colors.needsUpdate = true;
@@ -1117,16 +1126,25 @@ function animate() {
         const geo = cone.geometry;
         const colors = geo.attributes.color;
         const normals = geo.attributes.normal;
+        const positions = geo.attributes.position;
         const green = cone.material.userData.greenColor;
+        const bbox = geo.boundingBox || (geo.computeBoundingBox(), geo.boundingBox);
+        const minY = bbox.min.y;
+        const maxY = bbox.max.y;
+        const hRange = maxY - minY;
         for (let v = 0; v < normals.count; v++) {
           const ny = normals.getY(v);
-          if (ny > 0.15) {
-            const t = accumulation * Math.min(1, (ny - 0.15) * 2);
+          const py = positions.getY(v);
+          const heightRatio = (py - minY) / hRange;
+          if (ny > 0.15 && heightRatio < 0.6) {
+            const t = accumulation * (1 - heightRatio * 1.2);
             colors.setXYZ(v,
               green.r + (1 - green.r) * t,
               green.g + (1 - green.g) * t,
               green.b + (1 - green.b) * t
             );
+          } else {
+            colors.setXYZ(v, green.r, green.g, green.b);
           }
         }
         colors.needsUpdate = true;
