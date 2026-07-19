@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Camping Sim</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: monospace; }
+canvas { display: block; }
+#controls {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: rgba(0,0,0,0.7);
+  color: #ddd;
+  padding: 16px;
+  border-radius: 8px;
+  min-width: 200px;
+  z-index: 100;
+}
+#controls h3 { margin-bottom: 12px; color: #f0c040; font-size: 14px; }
+.control-row { margin-bottom: 10px; }
+.control-row label { display: block; font-size: 11px; margin-bottom: 4px; color: #aaa; }
+.control-row input[type="range"] { width: 100%; }
+.control-row button {
+  background: #333;
+  color: #ddd;
+  border: 1px solid #555;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-right: 4px;
+}
+.control-row button.active { background: #5a8; color: #fff; border-color: #5a8; }
+.control-row button:hover { background: #444; }
+#time-display { font-size: 11px; color: #f0c040; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <h3>⛺ CAMP CONTROLS</h3>
+  <div class="control-row">
+    <label>Time of Day</label>
+    <input type="range" id="time-slider" min="0" max="24" step="0.1" value="18">
+    <div id="time-display">18:00</div>
+  </div>
+  <div class="control-row">
+    <label>Weather</label>
+    <button id="btn-clear" class="active">Clear</button>
+    <button id="btn-rain">Rain</button>
+    <button id="btn-snow">Snow</button>
+  </div>
+  <div class="control-row">
+    <label>Wind</label>
+    <input type="range" id="wind-slider" min="0" max="100" step="1" value="10">
+  </div>
+  <div class="control-row">
+    <label>Fog</label>
+    <input type="range" id="fog-slider" min="0" max="100" step="1" value="0">
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(12, 8, 12);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI / 2.05;
+controls.minDistance = 5;
+controls.maxDistance = 40;
+controls.update();
+
+let timeOfDay = 18.0;
+let weather = 'clear';
+let windStrength = 10;
+let fogDensity = 0;
+
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.left = -20;
+sunLight.shadow.camera.right = 20;
+sunLight.shadow.camera.top = 20;
+sunLight.shadow.camera.bottom = -20;
+scene.add(sunLight);
+
+const moonLight = new THREE.DirectionalLight(0x4466aa, 0.15);
+scene.add(moonLight);
+
+const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+scene.add(ambientLight);
+
+const fireLight = new THREE.PointLight(0xff6622, 2, 12);
+fireLight.position.set(0, 1.2, 0);
+fireLight.castShadow = true;
+scene.add(fireLight);
+
+const fireLight2 = new THREE.PointLight(0xff4400, 1, 8);
+fireLight2.position.set(0.2, 0.8, 0.1);
+scene.add(fireLight2);
+
+scene.fog = new THREE.FogExp2(0x88aacc, 0.0);
+
+// --- TERRAIN ---
+const groundGeo = new THREE.CircleGeometry(40, 64);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a2a, roughness: 0.9 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const clearingGeo = new THREE.CircleGeometry(6, 32);
+const clearingMat = new THREE.MeshStandardMaterial({ color: 0x5a6b3a, roughness: 1.0 });
+const clearing = new THREE.Mesh(clearingGeo, clearingMat);
+clearing.rotation.x = -Math.PI / 2;
+clearing.position.y = 0.01;
+clearing.receiveShadow = true;
+scene.add(clearing);
+
+const dirtGeo = new THREE.CircleGeometry(2.5, 24);
+const dirtMat = new THREE.MeshStandardMaterial({ color: 0x6b5033, roughness: 1.0 });
+const dirt = new THREE.Mesh(dirtGeo, dirtMat);
+dirt.rotation.x = -Math.PI / 2;
+dirt.position.y = 0.02;
+dirt.receiveShadow = true;
+scene.add(dirt);
+
+// --- CREEK ---
+function buildCreek() {
+  const creekGroup = new THREE.Group();
+  const creekPath = new THREE.CurvePath();
+  const points = [
+    new THREE.Vector3(-25, 0.03, 10),
+    new THREE.Vector3(-15, 0.03, 9),
+    new THREE.Vector3(-8, 0.03, 8.5),
+    new THREE.Vector3(0, 0.03, 9),
+    new THREE.Vector3(8, 0.03, 10),
+    new THREE.Vector3(18, 0.03, 11),
+    new THREE.Vector3(30, 0.03, 12),
+  ];
+  const curve = new THREE.CatmullRomCurve3(points);
+  const tubeGeo = new THREE.TubeGeometry(curve, 40, 0.6, 8, false);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x3388aa,
+    roughness: 0.2,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.7,
+  });
+  const creek = new THREE.Mesh(tubeGeo, waterMat);
+  creekGroup.add(creek);
+
+  const bankCurve = new THREE.CatmullRomCurve3(points);
+  const bankGeo = new THREE.TubeGeometry(bankCurve, 40, 1.2, 8, false);
+  const bankMat = new THREE.MeshStandardMaterial({ color: 0x4a3a22, roughness: 1.0 });
+  const bank = new THREE.Mesh(bankGeo, bankMat);
+  bank.position.y = -0.05;
+  creekGroup.add(bank);
+
+  return creekGroup;
+}
+scene.add(buildCreek());
+
+// --- TREES ---
+function makeTree(x, z, height, trunkRadius) {
+  const group = new THREE.Group();
+  const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.6, trunkRadius, height * 0.4, 6);
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e, roughness: 0.9 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = height * 0.2;
+  trunk.castShadow = true;
+  group.add(trunk);
+
+  const foliageLayers = 3 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < foliageLayers; i++) {
+    const layerHeight = height * 0.25;
+    const layerRadius = (height * 0.35) * (1 - i * 0.2);
+    const layerY = height * 0.4 + i * layerHeight * 0.6;
+    const coneGeo = new THREE.ConeGeometry(layerRadius, layerHeight, 7);
+    const shade = 0.3 + Math.random() * 0.15;
+    const coneMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(shade * 0.4, shade, shade * 0.3),
+      roughness: 0.8,
+    });
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.y = layerY;
+    cone.rotation.y = Math.random() * Math.PI;
+    cone.castShadow = true;
+    group.add(cone);
+  }
+
+  group.position.set(x, 0, z);
+  group.rotation.y = Math.random() * Math.PI * 2;
+  return group;
+}
+
+const treePositions = [];
+for (let i = 0; i < 80; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 8 + Math.random() * 28;
+  const x = Math.cos(angle) * dist;
+  const z = Math.sin(angle) * dist;
+  if (Math.abs(z - 10) < 2.5 && x > -25 && x < 30) continue;
+  const height = 4 + Math.random() * 5;
+  const radius = 0.15 + Math.random() * 0.15;
+  const tree = makeTree(x, z, height, radius);
+  scene.add(tree);
+  treePositions.push({ obj: tree, baseX: x, baseZ: z });
+}
+
+// --- TENT ---
+function buildTent() {
+  const tentGroup = new THREE.Group();
+
+  const shape = new THREE.Shape();
+  shape.moveTo(-1.5, 0);
+  shape.lineTo(0, 2.0);
+  shape.lineTo(1.5, 0);
+  shape.closePath();
+
+  const extrudeSettings = { depth: 2.8, bevelEnabled: false };
+  const tentGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  const tentMat = new THREE.MeshStandardMaterial({ color: 0xcc5522, roughness: 0.7 });
+  const tent = new THREE.Mesh(tentGeo, tentMat);
+  tent.rotation.y = -Math.PI / 4;
+  tent.position.set(-3, 0, -2);
+  tent.castShadow = true;
+  tent.receiveShadow = true;
+  tentGroup.add(tent);
+
+  const flyGeo = new THREE.PlaneGeometry(4.5, 3.5);
+  const flyMat = new THREE.MeshStandardMaterial({
+    color: 0x886633,
+    roughness: 0.6,
+    side: THREE.DoubleSide,
+  });
+  const fly = new THREE.Mesh(flyGeo, flyMat);
+  fly.position.set(-3, 2.1, -0.6);
+  fly.rotation.x = -Math.PI / 2;
+  fly.rotation.z = -Math.PI / 4;
+  fly.castShadow = true;
+  tentGroup.add(fly);
+
+  return tentGroup;
+}
+scene.add(buildTent());
+
+// --- CAMPFIRE ---
+const fireGroup = new THREE.Group();
+
+const ringGeo = new THREE.TorusGeometry(0.8, 0.15, 8, 16);
+const ringMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 1.0 });
+const fireRing = new THREE.Mesh(ringGeo, ringMat);
+fireRing.rotation.x = -Math.PI / 2;
+fireRing.position.y = 0.1;
+fireGroup.add(fireRing);
+
+for (let i = 0; i < 8; i++) {
+  const rockGeo = new THREE.SphereGeometry(0.12 + Math.random() * 0.08, 5, 4);
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0.25 + Math.random() * 0.1, 0.22 + Math.random() * 0.1, 0.2),
+    roughness: 1.0,
+  });
+  const rock = new THREE.Mesh(rockGeo, rockMat);
+  const a = (i / 8) * Math.PI * 2;
+  rock.position.set(Math.cos(a) * 0.75, 0.1, Math.sin(a) * 0.75);
+  rock.scale.y = 0.6;
+  fireGroup.add(rock);
+}
+
+for (let i = 0; i < 5; i++) {
+  const logGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.7, 5);
+  const logMat = new THREE.MeshStandardMaterial({ color: 0x3d2810, roughness: 1.0 });
+  const log = new THREE.Mesh(logGeo, logMat);
+  const angle = (i / 5) * Math.PI * 2;
+  log.position.set(Math.cos(angle) * 0.25, 0.25, Math.sin(angle) * 0.25);
+  log.rotation.z = Math.PI / 2 - 0.4;
+  log.rotation.y = angle;
+  fireGroup.add(log);
+}
+
+scene.add(fireGroup);
+
+// --- FIRE PARTICLES ---
+const fireParticleCount = 60;
+const fireParticlesGeo = new THREE.BufferGeometry();
+const firePositions = new Float32Array(fireParticleCount * 3);
+const fireSizes = new Float32Array(fireParticleCount);
+const fireAlphas = new Float32Array(fireParticleCount);
+const fireVelocities = [];
+
+for (let i = 0; i < fireParticleCount; i++) {
+  firePositions[i * 3] = (Math.random() - 0.5) * 0.4;
+  firePositions[i * 3 + 1] = Math.random() * 1.5;
+  firePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
+  fireSizes[i] = 0.1 + Math.random() * 0.2;
+  fireAlphas[i] = Math.random();
+  fireVelocities.push({
+    x: (Math.random() - 0.5) * 0.01,
+    y: 0.02 + Math.random() * 0.03,
+    z: (Math.random() - 0.5) * 0.01,
+  });
+}
+fireParticlesGeo.setAttribute('position', new THREE.BufferAttribute(firePositions, 3));
+fireParticlesGeo.setAttribute('size', new THREE.BufferAttribute(fireSizes, 1));
+
+const fireParticleMat = new THREE.PointsMaterial({
+  color: 0xff6600,
+  size: 0.2,
+  transparent: true,
+  opacity: 0.8,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
+const fireParticles = new THREE.Points(fireParticlesGeo, fireParticleMat);
+fireParticles.position.set(0, 0.3, 0);
+scene.add(fireParticles);
+
+// --- SMOKE PARTICLES ---
+const smokeCount = 30;
+const smokeGeo = new THREE.BufferGeometry();
+const smokePositions = new Float32Array(smokeCount * 3);
+const smokeVelocities = [];
+for (let i = 0; i < smokeCount; i++) {
+  smokePositions[i * 3] = (Math.random() - 0.5) * 0.3;
+  smokePositions[i * 3 + 1] = 1.5 + Math.random() * 2;
+  smokePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+  smokeVelocities.push({
+    x: (Math.random() - 0.5) * 0.005,
+    y: 0.01 + Math.random() * 0.015,
+    z: (Math.random() - 0.5) * 0.005,
+  });
+}
+smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePositions, 3));
+const smokeMat = new THREE.PointsMaterial({
+  color: 0x888888,
+  size: 0.4,
+  transparent: true,
+  opacity: 0.3,
+  depthWrite: false,
+});
+const smoke = new THREE.Points(smokeGeo, smokeMat);
+smoke.position.set(0, 0.3, 0);
+scene.add(smoke);
+
+// --- LOG SEATS ---
+function makeLogSeat(x, z, rotY) {
+  const geo = new THREE.CylinderGeometry(0.2, 0.22, 1.8, 7);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x4a3018, roughness: 0.9 });
+  const log = new THREE.Mesh(geo, mat);
+  log.position.set(x, 0.22, z);
+  log.rotation.z = Math.PI / 2;
+  log.rotation.y = rotY;
+  log.castShadow = true;
+  log.receiveShadow = true;
+  return log;
+}
+scene.add(makeLogSeat(1.8, 0.5, 0.3));
+scene.add(makeLogSeat(-0.5, 2.0, 1.2));
+
+// --- COOLER ---
+function buildCooler() {
+  const group = new THREE.Group();
+  const bodyGeo = new THREE.BoxGeometry(0.8, 0.5, 0.5);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2255aa, roughness: 0.5 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.25;
+  body.castShadow = true;
+  group.add(body);
+
+  const lidGeo = new THREE.BoxGeometry(0.82, 0.12, 0.52);
+  const lidMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4 });
+  const lid = new THREE.Mesh(lidGeo, lidMat);
+  lid.position.y = 0.56;
+  lid.castShadow = true;
+  group.add(lid);
+
+  group.position.set(2.5, 0, -1.5);
+  group.rotation.y = 0.4;
+  return group;
+}
+scene.add(buildCooler());
+
+// --- LANTERN ---
+function buildLantern(x, y, z) {
+  const group = new THREE.Group();
+  const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, y, 6);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  const pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.y = y / 2;
+  group.add(pole);
+
+  const lanternGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.2, 8);
+  const lanternMat = new THREE.MeshStandardMaterial({
+    color: 0xffdd44,
+    emissive: 0xffaa00,
+    emissiveIntensity: 0.5,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+  lantern.position.y = y + 0.1;
+  group.add(lantern);
+
+  group.position.set(x, 0, z);
+  return group;
+}
+scene.add(buildLantern(-1.5, 1.5, 2.5));
+
+// --- RAIN SYSTEM ---
+const rainCount = 3000;
+const rainGeo = new THREE.BufferGeometry();
+const rainPositions = new Float32Array(rainCount * 3);
+for (let i = 0; i < rainCount; i++) {
+  rainPositions[i * 3] = (Math.random() - 0.5) * 60;
+  rainPositions[i * 3 + 1] = Math.random() * 30;
+  rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+}
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+const rainMat = new THREE.PointsMaterial({
+  color: 0xaaccff,
+  size: 0.08,
+  transparent: true,
+  opacity: 0.6,
+});
+const rain = new THREE.Points(rainGeo, rainMat);
+rain.visible = false;
+scene.add(rain);
+
+// --- SNOW SYSTEM ---
+const snowCount = 2000;
+const snowGeo = new THREE.BufferGeometry();
+const snowPositions = new Float32Array(snowCount * 3);
+for (let i = 0; i < snowCount; i++) {
+  snowPositions[i * 3] = (Math.random() - 0.5) * 60;
+  snowPositions[i * 3 + 1] = Math.random() * 25;
+  snowPositions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+}
+snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+const snowMat = new THREE.PointsMaterial({
+  color: 0xffffff,
+  size: 0.12,
+  transparent: true,
+  opacity: 0.8,
+});
+const snowParticles = new THREE.Points(snowGeo, snowMat);
+snowParticles.visible = false;
+scene.add(snowParticles);
+
+// --- SKY ---
+function getSkyColor(hour) {
+  if (hour < 5 || hour > 21) return new THREE.Color(0x0a0a1a);
+  if (hour < 6) return new THREE.Color(0x1a1a3a).lerp(new THREE.Color(0x443355), (hour - 5));
+  if (hour < 7) return new THREE.Color(0x443355).lerp(new THREE.Color(0xff8844), (hour - 6));
+  if (hour < 8) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x66aadd), (hour - 7));
+  if (hour < 17) return new THREE.Color(0x66aadd);
+  if (hour < 18) return new THREE.Color(0x66aadd).lerp(new THREE.Color(0xff8844), (hour - 17));
+  if (hour < 19) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x553344), (hour - 18));
+  if (hour < 20) return new THREE.Color(0x553344).lerp(new THREE.Color(0x1a1a3a), (hour - 19));
+  return new THREE.Color(0x1a1a3a).lerp(new THREE.Color(0x0a0a1a), (hour - 20));
+}
+
+function getSunIntensity(hour) {
+  if (hour < 6 || hour > 20) return 0;
+  if (hour < 8) return (hour - 6) / 2;
+  if (hour > 18) return (20 - hour) / 2;
+  return 1.0;
+}
+
+// --- AUDIO ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let fireNoiseNode = null;
+let rainNoiseNode = null;
+
+function startFireAudio() {
+  if (fireNoiseNode) return;
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.03;
+    if (Math.random() < 0.001) data[i] *= 8;
+  }
+  fireNoiseNode = audioCtx.createBufferSource();
+  fireNoiseNode.buffer = buffer;
+  fireNoiseNode.loop = true;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 400;
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.3;
+  fireNoiseNode.connect(filter).connect(gain).connect(audioCtx.destination);
+  fireNoiseNode.start();
+}
+
+function startRainAudio() {
+  if (rainNoiseNode) return;
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.08;
+  }
+  rainNoiseNode = audioCtx.createBufferSource();
+  rainNoiseNode.buffer = buffer;
+  rainNoiseNode.loop = true;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 3000;
+  filter.Q.value = 0.5;
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.15;
+  rainNoiseNode.connect(filter).connect(gain).connect(audioCtx.destination);
+  rainNoiseNode.start();
+}
+
+function stopRainAudio() {
+  if (rainNoiseNode) {
+    rainNoiseNode.stop();
+    rainNoiseNode = null;
+  }
+}
+
+document.addEventListener('click', () => {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  startFireAudio();
+}, { once: true });
+
+// --- UPDATE LIGHTING ---
+function updateLighting() {
+  const hour = timeOfDay;
+  const skyColor = getSkyColor(hour);
+  scene.background = skyColor;
+  scene.fog.color.copy(skyColor);
+
+  const sunIntensity = getSunIntensity(hour);
+  sunLight.intensity = sunIntensity * 1.5;
+
+  const sunAngle = ((hour - 6) / 14) * Math.PI;
+  sunLight.position.set(Math.cos(sunAngle) * 20, Math.sin(sunAngle) * 20, 5);
+
+  if (hour < 7 || hour > 19) {
+    sunLight.color.set(0xff8844);
+  } else if (hour < 8 || hour > 18) {
+    sunLight.color.set(0xffcc88);
+  } else {
+    sunLight.color.set(0xffffff);
+  }
+
+  const isNight = hour < 6 || hour > 20;
+  moonLight.intensity = isNight ? 0.2 : 0;
+  ambientLight.intensity = 0.15 + sunIntensity * 0.4;
+
+  const fireBrightness = isNight ? 3.0 : (hour < 8 || hour > 17 ? 2.0 : 1.0);
+  fireLight.intensity = fireBrightness;
+  fireLight2.intensity = fireBrightness * 0.6;
+
+  renderer.toneMappingExposure = isNight ? 0.6 : 1.0;
+}
+
+// --- CONTROLS UI ---
+const timeSlider = document.getElementById('time-slider');
+const timeDisplay = document.getElementById('time-display');
+const windSlider = document.getElementById('wind-slider');
+const fogSlider = document.getElementById('fog-slider');
+const btnClear = document.getElementById('btn-clear');
+const btnRain = document.getElementById('btn-rain');
+const btnSnow = document.getElementById('btn-snow');
+
+timeSlider.addEventListener('input', (e) => {
+  timeOfDay = parseFloat(e.target.value);
+  const h = Math.floor(timeOfDay);
+  const m = Math.floor((timeOfDay - h) * 60);
+  timeDisplay.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+});
+
+windSlider.addEventListener('input', (e) => { windStrength = parseInt(e.target.value); });
+fogSlider.addEventListener('input', (e) => {
+  fogDensity = parseInt(e.target.value);
+  scene.fog.density = fogDensity * 0.002;
+});
+
+function setWeather(w) {
+  weather = w;
+  btnClear.classList.toggle('active', w === 'clear');
+  btnRain.classList.toggle('active', w === 'rain');
+  btnSnow.classList.toggle('active', w === 'snow');
+  rain.visible = w === 'rain';
+  snowParticles.visible = w === 'snow';
+  if (w === 'rain') { startRainAudio(); } else { stopRainAudio(); }
+}
+btnClear.addEventListener('click', () => setWeather('clear'));
+btnRain.addEventListener('click', () => setWeather('rain'));
+btnSnow.addEventListener('click', () => setWeather('snow'));
+
+// --- ANIMATE ---
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  const elapsed = clock.getElapsedTime();
+
+  controls.update();
+  updateLighting();
+
+  fireLight.intensity += (Math.random() - 0.5) * 0.4;
+  fireLight.intensity = Math.max(0.5, Math.min(4, fireLight.intensity));
+  fireLight2.intensity = fireLight.intensity * 0.6 + (Math.random() - 0.5) * 0.2;
+
+  const fp = fireParticlesGeo.attributes.position.array;
+  for (let i = 0; i < fireParticleCount; i++) {
+    fp[i * 3] += fireVelocities[i].x + (windStrength * 0.0001);
+    fp[i * 3 + 1] += fireVelocities[i].y;
+    fp[i * 3 + 2] += fireVelocities[i].z;
+    if (fp[i * 3 + 1] > 2.0) {
+      fp[i * 3] = (Math.random() - 0.5) * 0.3;
+      fp[i * 3 + 1] = 0;
+      fp[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+    }
+  }
+  fireParticlesGeo.attributes.position.needsUpdate = true;
+
+  const sp = smokeGeo.attributes.position.array;
+  for (let i = 0; i < smokeCount; i++) {
+    sp[i * 3] += smokeVelocities[i].x + (windStrength * 0.0003);
+    sp[i * 3 + 1] += smokeVelocities[i].y;
+    sp[i * 3 + 2] += smokeVelocities[i].z;
+    if (sp[i * 3 + 1] > 5) {
+      sp[i * 3] = (Math.random() - 0.5) * 0.3;
+      sp[i * 3 + 1] = 1.5;
+      sp[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+    }
+  }
+  smokeGeo.attributes.position.needsUpdate = true;
+
+  if (weather === 'rain') {
+    const rp = rainGeo.attributes.position.array;
+    for (let i = 0; i < rainCount; i++) {
+      rp[i * 3 + 1] -= 0.5 + windStrength * 0.005;
+      rp[i * 3] += windStrength * 0.002;
+      if (rp[i * 3 + 1] < 0) {
+        rp[i * 3] = (Math.random() - 0.5) * 60;
+        rp[i * 3 + 1] = 25 + Math.random() * 5;
+        rp[i * 3 + 2] = (Math.random() - 0.5) * 60;
+      }
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+  }
+
+  if (weather === 'snow') {
+    const snp = snowGeo.attributes.position.array;
+    for (let i = 0; i < snowCount; i++) {
+      snp[i * 3] += Math.sin(elapsed + i) * 0.003 + windStrength * 0.001;
+      snp[i * 3 + 1] -= 0.03 + Math.random() * 0.01;
+      snp[i * 3 + 2] += Math.cos(elapsed + i * 1.3) * 0.003;
+      if (snp[i * 3 + 1] < 0) {
+        snp[i * 3] = (Math.random() - 0.5) * 60;
+        snp[i * 3 + 1] = 20 + Math.random() * 5;
+        snp[i * 3 + 2] = (Math.random() - 0.5) * 60;
+      }
+    }
+    snowGeo.attributes.position.needsUpdate = true;
+  }
+
+  for (const t of treePositions) {
+    const sway = Math.sin(elapsed * 0.5 + t.baseX * 0.3) * windStrength * 0.0003;
+    t.obj.rotation.z = sway;
+    t.obj.rotation.x = sway * 0.5;
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
