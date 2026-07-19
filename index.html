@@ -73,6 +73,17 @@ canvas { display: block; }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const _realRandom = Math.random;
+Math.random = mulberry32(12345);
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -328,7 +339,7 @@ function buildTent() {
   const tentMat = new THREE.MeshStandardMaterial({ color: 0xcc5522, roughness: 0.7 });
   const tent = new THREE.Mesh(tentGeo, tentMat);
   tent.rotation.y = -Math.PI / 4;
-  tent.position.set(-3, 0, -2);
+  tent.position.set(-3, getGroundY(-3, -2), -2);
   tent.castShadow = true;
   tent.receiveShadow = true;
   tentGroup.add(tent);
@@ -341,7 +352,7 @@ function buildTent() {
   const doorGeo = new THREE.ShapeGeometry(doorShape);
   const doorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
   const door = new THREE.Mesh(doorGeo, doorMat);
-  door.position.set(-3, 0.01, -2);
+  door.position.set(-3, getGroundY(-3, -2) + 0.01, -2);
   door.rotation.y = -Math.PI / 4;
   door.position.x += Math.sin(Math.PI / 4) * 0.01;
   door.position.z -= Math.cos(Math.PI / 4) * 0.01;
@@ -418,18 +429,23 @@ const fireAlphas = new Float32Array(fireParticleCount);
 const fireLifespan = new Float32Array(fireParticleCount);
 
 function respawnFireParticle(i, randomHeight) {
+  const isEmber = i >= fireParticleCount * 0.85;
   const angle = Math.random() * Math.PI * 2;
-  const dist = 0.08 + Math.random() * 0.3;
+  const dist = isEmber ? Math.random() * 0.12 : 0.08 + Math.random() * 0.3;
   firePositions[i * 3] = Math.cos(angle) * dist;
   firePositions[i * 3 + 1] = randomHeight ? Math.random() * 0.8 : 0;
   firePositions[i * 3 + 2] = Math.sin(angle) * dist;
-  const r = Math.random();
-  if (r < 0.03) {
-    fireLifespan[i] = 1.2 + Math.random() * 1.0;
-  } else if (r < 0.1) {
-    fireLifespan[i] = 0.5 + Math.random() * 0.4;
+  if (isEmber) {
+    fireLifespan[i] = 1.0 + Math.random() * 2.0;
   } else {
-    fireLifespan[i] = 0.15 + Math.random() * 0.25;
+    const r = Math.random();
+    if (r < 0.03) {
+      fireLifespan[i] = 1.2 + Math.random() * 1.0;
+    } else if (r < 0.1) {
+      fireLifespan[i] = 0.5 + Math.random() * 0.4;
+    } else {
+      fireLifespan[i] = 0.15 + Math.random() * 0.25;
+    }
   }
 }
 
@@ -485,7 +501,7 @@ function makeLogSeat(x, z, rotY) {
   const geo = new THREE.CylinderGeometry(0.2, 0.22, 1.8, 7);
   const mat = new THREE.MeshStandardMaterial({ color: 0x4a3018, roughness: 0.9 });
   const log = new THREE.Mesh(geo, mat);
-  log.position.set(x, 0.22, z);
+  log.position.set(x, getGroundY(x, z) + 0.22, z);
   log.rotation.z = Math.PI / 2;
   log.rotation.y = rotY;
   log.castShadow = true;
@@ -512,7 +528,7 @@ function buildCooler() {
   lid.castShadow = true;
   group.add(lid);
 
-  group.position.set(2.5, 0, -1.5);
+  group.position.set(2.5, getGroundY(2.5, -1.5), -1.5);
   group.rotation.y = 0.4;
   return group;
 }
@@ -733,6 +749,8 @@ btnSnow.addEventListener('click', () => setWeather('snow'));
 // --- ANIMATE ---
 const clock = new THREE.Clock();
 
+Math.random = _realRandom;
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
@@ -757,7 +775,12 @@ function animate() {
     const z = fp[i * 3 + 2];
     const distFromCenter = Math.sqrt(x * x + z * z);
 
-    if (distFromCenter > 0.06) {
+    if (i >= fireParticleCount * 0.85) {
+      fp[i * 3] += (Math.random() - 0.5) * 0.002;
+      fp[i * 3 + 1] += 0.008 + Math.random() * 0.006;
+      fp[i * 3 + 2] += (Math.random() - 0.5) * 0.002;
+      fp[i * 3] += windStrength * 0.00015;
+    } else if (distFromCenter > 0.06) {
       const pullStrength = 0.006 + distFromCenter * 0.012;
       fp[i * 3] -= (x / distFromCenter) * pullStrength;
       fp[i * 3 + 2] -= (z / distFromCenter) * pullStrength;
