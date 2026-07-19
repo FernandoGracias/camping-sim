@@ -424,12 +424,12 @@ function respawnFireParticle(i, randomHeight) {
   firePositions[i * 3 + 1] = randomHeight ? Math.random() * 0.8 : 0;
   firePositions[i * 3 + 2] = Math.sin(angle) * dist;
   const r = Math.random();
-  if (r < 0.1) {
-    fireLifespan[i] = 1.5 + Math.random() * 1.5;
-  } else if (r < 0.3) {
-    fireLifespan[i] = 0.8 + Math.random() * 0.5;
+  if (r < 0.03) {
+    fireLifespan[i] = 1.2 + Math.random() * 1.0;
+  } else if (r < 0.1) {
+    fireLifespan[i] = 0.5 + Math.random() * 0.4;
   } else {
-    fireLifespan[i] = 0.4 + Math.random() * 0.4;
+    fireLifespan[i] = 0.15 + Math.random() * 0.25;
   }
 }
 
