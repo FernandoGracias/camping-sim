@@ -324,16 +324,18 @@ function makeTree(x, z, height, trunkRadius) {
     const layerHeight = height * 0.15;
     const layerRadius = (height * 0.18) * (1 - i * 0.12);
     const layerY = height * 0.4 + i * layerHeight * 0.7;
-    const coneGeo = new THREE.ConeGeometry(layerRadius, layerHeight, 7);
-    coneGeo.computeVertexNormals();
+    const coneGeo = new THREE.ConeGeometry(layerRadius, layerHeight, 7, 4);
 
     const shade = 0.3 + Math.random() * 0.15;
     const greenColor = new THREE.Color(shade * 0.4, shade, shade * 0.3);
 
-    const colors = new Float32Array(coneGeo.attributes.position.count * 3);
-    const normals = coneGeo.attributes.normal;
-    for (let v = 0; v < normals.count; v++) {
-      const ny = normals.getY(v);
+    const posAttr = coneGeo.attributes.position;
+    const colors = new Float32Array(posAttr.count * 3);
+    coneGeo.computeBoundingBox();
+    const minY = coneGeo.boundingBox.min.y;
+    const maxY = coneGeo.boundingBox.max.y;
+    const range = maxY - minY;
+    for (let v = 0; v < posAttr.count; v++) {
       colors[v * 3] = greenColor.r;
       colors[v * 3 + 1] = greenColor.g;
       colors[v * 3 + 2] = greenColor.b;
@@ -1087,19 +1089,16 @@ function animate() {
     for (const cone of treeFoliageCones) {
       const geo = cone.geometry;
       const colors = geo.attributes.color;
-      const normals = geo.attributes.normal;
       const positions = geo.attributes.position;
       const green = cone.material.userData.greenColor;
-      const bbox = geo.boundingBox || (geo.computeBoundingBox(), geo.boundingBox);
-      const minY = bbox.min.y;
-      const maxY = bbox.max.y;
-      const hRange = maxY - minY;
-      for (let v = 0; v < normals.count; v++) {
-        const ny = normals.getY(v);
+      const minY = geo.boundingBox.min.y;
+      const maxY = geo.boundingBox.max.y;
+      const range = maxY - minY;
+      for (let v = 0; v < positions.count; v++) {
         const py = positions.getY(v);
-        const heightRatio = (py - minY) / hRange;
-        if (ny > 0.15 && heightRatio < 0.6) {
-          const t = accumulation * (1 - heightRatio * 1.2);
+        const heightRatio = (py - minY) / range;
+        if (heightRatio < 0.55) {
+          const t = accumulation * (1 - heightRatio * 1.5);
           colors.setXYZ(v,
             green.r + (1 - green.r) * t,
             green.g + (1 - green.g) * t,
@@ -1125,19 +1124,16 @@ function animate() {
       for (const cone of treeFoliageCones) {
         const geo = cone.geometry;
         const colors = geo.attributes.color;
-        const normals = geo.attributes.normal;
         const positions = geo.attributes.position;
         const green = cone.material.userData.greenColor;
-        const bbox = geo.boundingBox || (geo.computeBoundingBox(), geo.boundingBox);
-        const minY = bbox.min.y;
-        const maxY = bbox.max.y;
-        const hRange = maxY - minY;
-        for (let v = 0; v < normals.count; v++) {
-          const ny = normals.getY(v);
+        const minY = geo.boundingBox.min.y;
+        const maxY = geo.boundingBox.max.y;
+        const range = maxY - minY;
+        for (let v = 0; v < positions.count; v++) {
           const py = positions.getY(v);
-          const heightRatio = (py - minY) / hRange;
-          if (ny > 0.15 && heightRatio < 0.6) {
-            const t = accumulation * (1 - heightRatio * 1.2);
+          const heightRatio = (py - minY) / range;
+          if (heightRatio < 0.55) {
+            const t = accumulation * (1 - heightRatio * 1.5);
             colors.setXYZ(v,
               green.r + (1 - green.r) * t,
               green.g + (1 - green.g) * t,
