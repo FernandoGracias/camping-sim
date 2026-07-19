@@ -908,41 +908,35 @@ function animate() {
   const delta = clock.getDelta();
   const elapsed = clock.getElapsedTime();
 
-  const panSpeed = 0.15;
   const zoomSpeed = 0.3;
+  const rotateSpeed = 0.03;
   if (keys['w']) {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    dir.y = 0;
-    dir.normalize();
-    controls.target.addScaledVector(dir, panSpeed);
-    camera.position.addScaledVector(dir, panSpeed);
+    const dist = camera.position.distanceTo(controls.target);
+    if (dist > controls.minDistance + zoomSpeed) {
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, zoomSpeed);
+    }
   }
   if (keys['s']) {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    dir.y = 0;
-    dir.normalize();
-    controls.target.addScaledVector(dir, -panSpeed);
-    camera.position.addScaledVector(dir, -panSpeed);
+    const dist = camera.position.distanceTo(controls.target);
+    if (dist < controls.maxDistance - zoomSpeed) {
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, -zoomSpeed);
+    }
   }
   if (keys['a']) {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    dir.y = 0;
-    dir.normalize();
-    const left = new THREE.Vector3(-dir.z, 0, dir.x);
-    controls.target.addScaledVector(left, panSpeed);
-    camera.position.addScaledVector(left, panSpeed);
+    const offset = camera.position.clone().sub(controls.target);
+    const angle = rotateSpeed;
+    const x = offset.x * Math.cos(angle) - offset.z * Math.sin(angle);
+    const z = offset.x * Math.sin(angle) + offset.z * Math.cos(angle);
+    camera.position.set(controls.target.x + x, camera.position.y, controls.target.z + z);
   }
   if (keys['d']) {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    dir.y = 0;
-    dir.normalize();
-    const right = new THREE.Vector3(dir.z, 0, -dir.x);
-    controls.target.addScaledVector(right, panSpeed);
-    camera.position.addScaledVector(right, panSpeed);
+    const offset = camera.position.clone().sub(controls.target);
+    const angle = -rotateSpeed;
+    const x = offset.x * Math.cos(angle) - offset.z * Math.sin(angle);
+    const z = offset.x * Math.sin(angle) + offset.z * Math.cos(angle);
+    camera.position.set(controls.target.x + x, camera.position.y, controls.target.z + z);
   }
 
   controls.update();
