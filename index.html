@@ -191,12 +191,12 @@ function buildCreek() {
       const x1 = pts[i + 1].x, z1 = pts[i + 1].y;
       const n0 = normals[i], n1 = normals[i + 1];
       positions.push(
+        x0 - n0.x * width, yPos, z0 - n0.z * width,
         x0 + n0.x * width, yPos, z0 + n0.z * width,
-        x0 - n0.x * width, yPos, z0 - n0.z * width,
         x1 + n1.x * width, yPos, z1 + n1.z * width,
         x0 - n0.x * width, yPos, z0 - n0.z * width,
+        x1 + n1.x * width, yPos, z1 + n1.z * width,
         x1 - n1.x * width, yPos, z1 - n1.z * width,
-        x1 + n1.x * width, yPos, z1 + n1.z * width,
       );
     }
     const geo = new THREE.BufferGeometry();
@@ -206,7 +206,7 @@ function buildCreek() {
   }
 
   const bankGeo = makeRibbonGeo(points, 1.8, 0.02);
-  const bankMat = new THREE.MeshStandardMaterial({ color: 0x7a6a45, roughness: 1.0 });
+  const bankMat = new THREE.MeshStandardMaterial({ color: 0x7a6a45, roughness: 1.0, side: THREE.DoubleSide });
   const bank = new THREE.Mesh(bankGeo, bankMat);
   bank.receiveShadow = true;
   creekGroup.add(bank);
@@ -218,6 +218,7 @@ function buildCreek() {
     metalness: 0.1,
     transparent: true,
     opacity: 0.75,
+    side: THREE.DoubleSide,
   });
   const water = new THREE.Mesh(waterGeo, waterMat);
   water.receiveShadow = true;
