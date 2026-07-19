@@ -59,6 +59,19 @@ canvas { display: block; }
     <label>Fog</label>
     <input type="range" id="fog-slider" min="0" max="100" step="1" value="0">
   </div>
+  <div class="control-row">
+    <label>Tent Color</label>
+    <input type="color" id="tent-color" value="#cc5522" style="width:100%;height:24px;border:none;cursor:pointer;">
+  </div>
+  <div class="control-row">
+    <label>Tent Style</label>
+    <select id="tent-style" style="width:100%;background:#333;color:#ddd;border:1px solid #555;padding:4px;border-radius:4px;font-size:11px;">
+      <option value="aframe">A-Frame (2P)</option>
+      <option value="dome">Dome (4P)</option>
+      <option value="cabin">Cabin (6P)</option>
+      <option value="tunnel">Tunnel (4P)</option>
+    </select>
+  </div>
 </div>
 
 <script type="importmap">
@@ -350,42 +363,86 @@ for (let i = 0; i < 200; i++) {
 }
 
 // --- TENT ---
-function buildTent() {
+let tentColor = 0xcc5522;
+let tentStyle = 'aframe';
+let currentTent = null;
+
+function buildTent(style, color) {
   const tentGroup = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
+  const groundY = getGroundY(-3, -2);
 
-  const shape = new THREE.Shape();
-  shape.moveTo(-1.5, 0);
-  shape.lineTo(0, 2.0);
-  shape.lineTo(1.5, 0);
-  shape.closePath();
-
-  const extrudeSettings = { depth: 2.8, bevelEnabled: false };
-  const tentGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-  const tentMat = new THREE.MeshStandardMaterial({ color: 0xcc5522, roughness: 0.7 });
-  const tent = new THREE.Mesh(tentGeo, tentMat);
-  tent.rotation.y = -Math.PI / 4;
-  tent.position.set(-3, getGroundY(-3, -2), -2);
-  tent.castShadow = true;
-  tent.receiveShadow = true;
-  tentGroup.add(tent);
-
-  const doorShape = new THREE.Shape();
-  doorShape.moveTo(-0.6, 0);
-  doorShape.lineTo(0, 1.0);
-  doorShape.lineTo(0.6, 0);
-  doorShape.closePath();
-  const doorGeo = new THREE.ShapeGeometry(doorShape);
-  const doorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
-  const door = new THREE.Mesh(doorGeo, doorMat);
-  door.position.set(-3, getGroundY(-3, -2) + 0.01, -2);
-  door.rotation.y = -Math.PI / 4;
-  door.position.x += Math.sin(Math.PI / 4) * 0.01;
-  door.position.z -= Math.cos(Math.PI / 4) * 0.01;
-  tentGroup.add(door);
+  if (style === 'aframe') {
+    const shape = new THREE.Shape();
+    shape.moveTo(-1.2, 0);
+    shape.lineTo(0, 1.8);
+    shape.lineTo(1.2, 0);
+    shape.closePath();
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.5, bevelEnabled: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.y = -Math.PI / 4;
+    mesh.position.set(-3, groundY, -2);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    tentGroup.add(mesh);
+  } else if (style === 'dome') {
+    const geo = new THREE.SphereGeometry(1.8, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(-3, groundY, -2);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    tentGroup.add(mesh);
+    const floorGeo = new THREE.CircleGeometry(1.8, 12);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(-3, groundY + 0.02, -2);
+    tentGroup.add(floor);
+  } else if (style === 'cabin') {
+    const bodyGeo = new THREE.BoxGeometry(3.2, 2.0, 2.8);
+    const body = new THREE.Mesh(bodyGeo, mat);
+    body.position.set(-3, groundY + 1.0, -2);
+    body.rotation.y = -Math.PI / 4;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    tentGroup.add(body);
+    const roofShape = new THREE.Shape();
+    roofShape.moveTo(-1.8, 0);
+    roofShape.lineTo(0, 0.8);
+    roofShape.lineTo(1.8, 0);
+    roofShape.closePath();
+    const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: 2.8, bevelEnabled: false });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.set(-3, groundY + 2.0, -2);
+    roof.rotation.y = -Math.PI / 4;
+    roof.castShadow = true;
+    tentGroup.add(roof);
+  } else if (style === 'tunnel') {
+    const path = new THREE.LineCurve3(
+      new THREE.Vector3(0, 0, -1.5),
+      new THREE.Vector3(0, 0, 1.5)
+    );
+    const tubeGeo = new THREE.TubeGeometry(path, 8, 1.2, 12, false);
+    const positions = tubeGeo.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      if (positions.getY(i) < 0) positions.setY(i, 0);
+    }
+    positions.needsUpdate = true;
+    tubeGeo.computeVertexNormals();
+    const mesh = new THREE.Mesh(tubeGeo, mat);
+    mesh.position.set(-3, groundY, -2);
+    mesh.rotation.y = -Math.PI / 4;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    tentGroup.add(mesh);
+  }
 
   return tentGroup;
 }
-scene.add(buildTent());
+
+currentTent = buildTent(tentStyle, tentColor);
+scene.add(currentTent);
 
 // --- CAMPFIRE ---
 const fireGroup = new THREE.Group();
@@ -812,6 +869,35 @@ btnClear.addEventListener('click', () => setWeather('clear'));
 btnRain.addEventListener('click', () => setWeather('rain'));
 btnSnow.addEventListener('click', () => setWeather('snow'));
 
+// --- TENT CONTROLS ---
+const tentColorInput = document.getElementById('tent-color');
+const tentStyleSelect = document.getElementById('tent-style');
+
+function rebuildTent() {
+  scene.remove(currentTent);
+  currentTent = buildTent(tentStyle, tentColor);
+  scene.add(currentTent);
+}
+
+tentColorInput.addEventListener('input', (e) => {
+  tentColor = parseInt(e.target.value.slice(1), 16);
+  rebuildTent();
+});
+
+tentStyleSelect.addEventListener('change', (e) => {
+  tentStyle = e.target.value;
+  rebuildTent();
+});
+
+// --- WASD CONTROLS ---
+const keys = {};
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+document.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
 // --- ANIMATE ---
 const clock = new THREE.Clock();
 
@@ -821,6 +907,43 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   const elapsed = clock.getElapsedTime();
+
+  const panSpeed = 0.15;
+  const zoomSpeed = 0.3;
+  if (keys['w']) {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0;
+    dir.normalize();
+    controls.target.addScaledVector(dir, panSpeed);
+    camera.position.addScaledVector(dir, panSpeed);
+  }
+  if (keys['s']) {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0;
+    dir.normalize();
+    controls.target.addScaledVector(dir, -panSpeed);
+    camera.position.addScaledVector(dir, -panSpeed);
+  }
+  if (keys['a']) {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0;
+    dir.normalize();
+    const left = new THREE.Vector3(-dir.z, 0, dir.x);
+    controls.target.addScaledVector(left, panSpeed);
+    camera.position.addScaledVector(left, panSpeed);
+  }
+  if (keys['d']) {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y = 0;
+    dir.normalize();
+    const right = new THREE.Vector3(dir.z, 0, -dir.x);
+    controls.target.addScaledVector(right, panSpeed);
+    camera.position.addScaledVector(right, panSpeed);
+  }
 
   controls.update();
   updateLighting();
