@@ -910,7 +910,28 @@ function animate() {
 
   const zoomSpeed = 0.3;
   const rotateSpeed = 0.03;
-  if (keys['w']) {
+  const tiltSpeed = 0.02;
+  if (keys['w'] && keys['shift']) {
+    const offset = camera.position.clone().sub(controls.target);
+    const radius = offset.length();
+    const theta = Math.atan2(offset.x, offset.z);
+    let phi = Math.acos(offset.y / radius);
+    phi = Math.max(0.1, phi - tiltSpeed);
+    offset.x = radius * Math.sin(phi) * Math.sin(theta);
+    offset.y = radius * Math.cos(phi);
+    offset.z = radius * Math.sin(phi) * Math.cos(theta);
+    camera.position.copy(controls.target).add(offset);
+  } else if (keys['s'] && keys['shift']) {
+    const offset = camera.position.clone().sub(controls.target);
+    const radius = offset.length();
+    const theta = Math.atan2(offset.x, offset.z);
+    let phi = Math.acos(offset.y / radius);
+    phi = Math.min(controls.maxPolarAngle, phi + tiltSpeed);
+    offset.x = radius * Math.sin(phi) * Math.sin(theta);
+    offset.y = radius * Math.cos(phi);
+    offset.z = radius * Math.sin(phi) * Math.cos(theta);
+    camera.position.copy(controls.target).add(offset);
+  } else if (keys['w']) {
     const dist = camera.position.distanceTo(controls.target);
     if (dist > controls.minDistance + zoomSpeed) {
       const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
