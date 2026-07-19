@@ -42,8 +42,8 @@ canvas { display: block; }
   <h3>⛺ CAMP CONTROLS</h3>
   <div class="control-row">
     <label>Time of Day</label>
-    <input type="range" id="time-slider" min="0" max="24" step="0.1" value="18">
-    <div id="time-display">18:00</div>
+    <input type="range" id="time-slider" min="0" max="24" step="0.1" value="13">
+    <div id="time-display">13:00</div>
   </div>
   <div class="control-row">
     <label>Weather</label>
@@ -107,7 +107,7 @@ controls.minDistance = 5;
 controls.maxDistance = 36;
 controls.update();
 
-let timeOfDay = 18.0;
+let timeOfDay = 13.0;
 let weather = 'clear';
 let windStrength = 10;
 let fogDensity = 0;
@@ -429,23 +429,21 @@ const fireAlphas = new Float32Array(fireParticleCount);
 const fireLifespan = new Float32Array(fireParticleCount);
 
 function respawnFireParticle(i, randomHeight) {
-  const isEmber = i >= fireParticleCount * 0.85;
   const angle = Math.random() * Math.PI * 2;
-  const dist = isEmber ? Math.random() * 0.12 : 0.08 + Math.random() * 0.3;
+  const dist = 0.08 + Math.random() * 0.3;
   firePositions[i * 3] = Math.cos(angle) * dist;
-  firePositions[i * 3 + 1] = randomHeight ? Math.random() * 0.8 : 0;
+  firePositions[i * 3 + 1] = randomHeight ? Math.random() * 0.5 : 0;
   firePositions[i * 3 + 2] = Math.sin(angle) * dist;
-  if (isEmber) {
-    fireLifespan[i] = 1.0 + Math.random() * 2.0;
+  const r = Math.random();
+  if (r < 0.05) {
+    fireLifespan[i] = 1.5 + Math.random() * 1.5;
+    fireAlphas[i] = 1;
+  } else if (r < 0.12) {
+    fireLifespan[i] = 0.5 + Math.random() * 0.4;
+    fireAlphas[i] = 0;
   } else {
-    const r = Math.random();
-    if (r < 0.03) {
-      fireLifespan[i] = 1.2 + Math.random() * 1.0;
-    } else if (r < 0.1) {
-      fireLifespan[i] = 0.5 + Math.random() * 0.4;
-    } else {
-      fireLifespan[i] = 0.15 + Math.random() * 0.25;
-    }
+    fireLifespan[i] = 0.15 + Math.random() * 0.25;
+    fireAlphas[i] = 0;
   }
 }
 
@@ -602,21 +600,21 @@ scene.add(snowParticles);
 
 // --- SKY ---
 function getSkyColor(hour) {
-  if (hour < 5 || hour > 21) return new THREE.Color(0x0a0a1a);
-  if (hour < 6) return new THREE.Color(0x1a1a3a).lerp(new THREE.Color(0x443355), (hour - 5));
-  if (hour < 7) return new THREE.Color(0x443355).lerp(new THREE.Color(0xff8844), (hour - 6));
-  if (hour < 8) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x66aadd), (hour - 7));
-  if (hour < 17) return new THREE.Color(0x66aadd);
-  if (hour < 18) return new THREE.Color(0x66aadd).lerp(new THREE.Color(0xff8844), (hour - 17));
-  if (hour < 19) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x553344), (hour - 18));
-  if (hour < 20) return new THREE.Color(0x553344).lerp(new THREE.Color(0x1a1a3a), (hour - 19));
-  return new THREE.Color(0x1a1a3a).lerp(new THREE.Color(0x0a0a1a), (hour - 20));
+  if (hour < 5 || hour > 22.5) return new THREE.Color(0x0a0a1a);
+  if (hour < 5.5) return new THREE.Color(0x1a1a3a).lerp(new THREE.Color(0x443355), (hour - 5) * 2);
+  if (hour < 6.5) return new THREE.Color(0x443355).lerp(new THREE.Color(0xff8844), (hour - 5.5));
+  if (hour < 7.5) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x66aadd), (hour - 6.5));
+  if (hour < 20) return new THREE.Color(0x66aadd);
+  if (hour < 20.5) return new THREE.Color(0x66aadd).lerp(new THREE.Color(0xff8844), (hour - 20) * 2);
+  if (hour < 21.5) return new THREE.Color(0xff8844).lerp(new THREE.Color(0x553344), (hour - 20.5));
+  if (hour < 22.5) return new THREE.Color(0x553344).lerp(new THREE.Color(0x0a0a1a), (hour - 21.5));
+  return new THREE.Color(0x0a0a1a);
 }
 
 function getSunIntensity(hour) {
-  if (hour < 6 || hour > 20) return 0;
-  if (hour < 8) return (hour - 6) / 2;
-  if (hour > 18) return (20 - hour) / 2;
+  if (hour < 6 || hour > 21.5) return 0;
+  if (hour < 7.5) return (hour - 6) / 1.5;
+  if (hour > 20) return (21.5 - hour) / 1.5;
   return 1.0;
 }
 
@@ -689,22 +687,22 @@ function updateLighting() {
   const sunIntensity = getSunIntensity(hour);
   sunLight.intensity = sunIntensity * 1.5;
 
-  const sunAngle = ((hour - 6) / 14) * Math.PI;
+  const sunAngle = ((hour - 6) / 15.5) * Math.PI;
   sunLight.position.set(Math.cos(sunAngle) * 20, Math.sin(sunAngle) * 20, 5);
 
-  if (hour < 7 || hour > 19) {
+  if (hour < 7 || hour > 20.5) {
     sunLight.color.set(0xff8844);
-  } else if (hour < 8 || hour > 18) {
+  } else if (hour < 8 || hour > 20) {
     sunLight.color.set(0xffcc88);
   } else {
     sunLight.color.set(0xffffff);
   }
 
-  const isNight = hour < 6 || hour > 20;
+  const isNight = hour < 5.5 || hour > 21.5;
   moonLight.intensity = isNight ? 0.2 : 0;
   ambientLight.intensity = 0.15 + sunIntensity * 0.4;
 
-  const fireBrightness = isNight ? 3.0 : (hour < 8 || hour > 17 ? 2.0 : 1.0);
+  const fireBrightness = isNight ? 3.0 : (hour < 7.5 || hour > 20 ? 2.0 : 1.0);
   fireLight.intensity = fireBrightness;
   fireLight2.intensity = fireBrightness * 0.6;
 
@@ -730,7 +728,7 @@ timeSlider.addEventListener('input', (e) => {
 windSlider.addEventListener('input', (e) => { windStrength = parseInt(e.target.value); });
 fogSlider.addEventListener('input', (e) => {
   fogDensity = parseInt(e.target.value);
-  scene.fog.density = fogDensity * 0.002;
+  scene.fog.density = fogDensity * 0.001;
 });
 
 function setWeather(w) {
@@ -775,11 +773,11 @@ function animate() {
     const z = fp[i * 3 + 2];
     const distFromCenter = Math.sqrt(x * x + z * z);
 
-    if (i >= fireParticleCount * 0.85) {
+    if (fireAlphas[i] === 1) {
       fp[i * 3] += (Math.random() - 0.5) * 0.002;
-      fp[i * 3 + 1] += 0.008 + Math.random() * 0.006;
+      fp[i * 3 + 1] += 0.006 + Math.random() * 0.004;
       fp[i * 3 + 2] += (Math.random() - 0.5) * 0.002;
-      fp[i * 3] += windStrength * 0.00015;
+      fp[i * 3] += windStrength * 0.00012;
     } else if (distFromCenter > 0.06) {
       const pullStrength = 0.006 + distFromCenter * 0.012;
       fp[i * 3] -= (x / distFromCenter) * pullStrength;
