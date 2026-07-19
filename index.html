@@ -141,22 +141,6 @@ function getGroundY(x, z) {
   return Math.sqrt(Math.max(0, WORLD_RADIUS * WORLD_RADIUS - dist * dist)) - WORLD_RADIUS;
 }
 
-const clearingGeo = new THREE.CircleGeometry(6, 32);
-const clearingMat = new THREE.MeshStandardMaterial({ color: 0x5a6b3a, roughness: 1.0 });
-const clearing = new THREE.Mesh(clearingGeo, clearingMat);
-clearing.rotation.x = -Math.PI / 2;
-clearing.position.y = 0.02;
-clearing.receiveShadow = true;
-scene.add(clearing);
-
-const dirtGeo = new THREE.CircleGeometry(2.5, 24);
-const dirtMat = new THREE.MeshStandardMaterial({ color: 0x6b5033, roughness: 1.0 });
-const dirt = new THREE.Mesh(dirtGeo, dirtMat);
-dirt.rotation.x = -Math.PI / 2;
-dirt.position.y = 0.02;
-dirt.receiveShadow = true;
-scene.add(dirt);
-
 // --- CREEK ---
 function buildCreek() {
   const creekGroup = new THREE.Group();
@@ -403,7 +387,7 @@ for (let i = 0; i < 5; i++) {
 scene.add(fireGroup);
 
 // --- FIRE PARTICLES ---
-const fireParticleCount = 60;
+const fireParticleCount = 80;
 const fireParticlesGeo = new THREE.BufferGeometry();
 const firePositions = new Float32Array(fireParticleCount * 3);
 const fireSizes = new Float32Array(fireParticleCount);
@@ -411,15 +395,15 @@ const fireAlphas = new Float32Array(fireParticleCount);
 const fireVelocities = [];
 
 for (let i = 0; i < fireParticleCount; i++) {
-  firePositions[i * 3] = (Math.random() - 0.5) * 0.4;
-  firePositions[i * 3 + 1] = Math.random() * 1.5;
-  firePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
+  firePositions[i * 3] = (Math.random() - 0.5) * 0.8;
+  firePositions[i * 3 + 1] = Math.random() * 0.8;
+  firePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.8;
   fireSizes[i] = 0.1 + Math.random() * 0.2;
   fireAlphas[i] = Math.random();
   fireVelocities.push({
-    x: (Math.random() - 0.5) * 0.01,
-    y: 0.02 + Math.random() * 0.03,
-    z: (Math.random() - 0.5) * 0.01,
+    x: (Math.random() - 0.5) * 0.015,
+    y: 0.015 + Math.random() * 0.02,
+    z: (Math.random() - 0.5) * 0.015,
   });
 }
 fireParticlesGeo.setAttribute('position', new THREE.BufferAttribute(firePositions, 3));
@@ -427,14 +411,14 @@ fireParticlesGeo.setAttribute('size', new THREE.BufferAttribute(fireSizes, 1));
 
 const fireParticleMat = new THREE.PointsMaterial({
   color: 0xff6600,
-  size: 0.2,
+  size: 0.25,
   transparent: true,
   opacity: 0.8,
   blending: THREE.AdditiveBlending,
   depthWrite: false,
 });
 const fireParticles = new THREE.Points(fireParticlesGeo, fireParticleMat);
-fireParticles.position.set(0, 0.3, 0);
+fireParticles.position.set(0, 0.2, 0);
 scene.add(fireParticles);
 
 // --- SMOKE PARTICLES ---
@@ -734,10 +718,10 @@ function animate() {
     fp[i * 3] += fireVelocities[i].x + (windStrength * 0.0001);
     fp[i * 3 + 1] += fireVelocities[i].y;
     fp[i * 3 + 2] += fireVelocities[i].z;
-    if (fp[i * 3 + 1] > 2.0) {
-      fp[i * 3] = (Math.random() - 0.5) * 0.3;
+    if (fp[i * 3 + 1] > 1.0) {
+      fp[i * 3] = (Math.random() - 0.5) * 0.7;
       fp[i * 3 + 1] = 0;
-      fp[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+      fp[i * 3 + 2] = (Math.random() - 0.5) * 0.7;
     }
   }
   fireParticlesGeo.attributes.position.needsUpdate = true;
