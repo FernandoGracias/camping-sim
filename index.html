@@ -352,6 +352,7 @@ function makeTree(x, z, height, trunkRadius) {
     cone.position.y = layerY;
     cone.rotation.y = Math.random() * Math.PI;
     cone.castShadow = true;
+    cone.userData = { isTop: i === foliageLayers - 1 };
     group.add(cone);
     treeFoliageCones.push(cone);
   }
@@ -1095,17 +1096,25 @@ function animate() {
       const maxY = geo.boundingBox.max.y;
       const range = maxY - minY;
       for (let v = 0; v < positions.count; v++) {
-        const py = positions.getY(v);
-        const heightRatio = (py - minY) / range;
-        if (heightRatio < 0.55) {
-          const t = accumulation * (1 - heightRatio * 1.5);
+        if (cone.userData.isTop) {
           colors.setXYZ(v,
-            green.r + (1 - green.r) * t,
-            green.g + (1 - green.g) * t,
-            green.b + (1 - green.b) * t
+            green.r + (1 - green.r) * accumulation,
+            green.g + (1 - green.g) * accumulation,
+            green.b + (1 - green.b) * accumulation
           );
         } else {
-          colors.setXYZ(v, green.r, green.g, green.b);
+          const py = positions.getY(v);
+          const heightRatio = (py - minY) / range;
+          if (heightRatio < 0.55) {
+            const t = accumulation * (1 - heightRatio * 1.5);
+            colors.setXYZ(v,
+              green.r + (1 - green.r) * t,
+              green.g + (1 - green.g) * t,
+              green.b + (1 - green.b) * t
+            );
+          } else {
+            colors.setXYZ(v, green.r, green.g, green.b);
+          }
         }
       }
       colors.needsUpdate = true;
@@ -1130,17 +1139,25 @@ function animate() {
         const maxY = geo.boundingBox.max.y;
         const range = maxY - minY;
         for (let v = 0; v < positions.count; v++) {
-          const py = positions.getY(v);
-          const heightRatio = (py - minY) / range;
-          if (heightRatio < 0.55) {
-            const t = accumulation * (1 - heightRatio * 1.5);
+          if (cone.userData.isTop) {
             colors.setXYZ(v,
-              green.r + (1 - green.r) * t,
-              green.g + (1 - green.g) * t,
-              green.b + (1 - green.b) * t
+              green.r + (1 - green.r) * accumulation,
+              green.g + (1 - green.g) * accumulation,
+              green.b + (1 - green.b) * accumulation
             );
           } else {
-            colors.setXYZ(v, green.r, green.g, green.b);
+            const py = positions.getY(v);
+            const heightRatio = (py - minY) / range;
+            if (heightRatio < 0.55) {
+              const t = accumulation * (1 - heightRatio * 1.5);
+              colors.setXYZ(v,
+                green.r + (1 - green.r) * t,
+                green.g + (1 - green.g) * t,
+                green.b + (1 - green.b) * t
+              );
+            } else {
+              colors.setXYZ(v, green.r, green.g, green.b);
+            }
           }
         }
         colors.needsUpdate = true;
