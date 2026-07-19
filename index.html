@@ -306,7 +306,8 @@ function buildCreek() {
 scene.add(buildCreek());
 
 // --- TREES ---
-const treeFoliageMats = [];
+const treeTopMats = [];
+const treeBotMats = [];
 
 function makeTree(x, z, height, trunkRadius) {
   const group = new THREE.Group();
@@ -330,7 +331,12 @@ function makeTree(x, z, height, trunkRadius) {
       roughness: 0.8,
     });
     coneMat.userData = { originalColor: originalColor.clone() };
-    treeFoliageMats.push(coneMat);
+    const isTopHalf = i >= Math.floor(foliageLayers / 2);
+    if (isTopHalf) {
+      treeTopMats.push(coneMat);
+    } else {
+      treeBotMats.push(coneMat);
+    }
     const cone = new THREE.Mesh(coneGeo, coneMat);
     cone.position.y = layerY;
     cone.rotation.y = Math.random() * Math.PI;
@@ -1068,8 +1074,8 @@ function animate() {
     snowGround.visible = true;
     snowGroundMat.opacity = accumulation * 0.85;
     const snowWhite = new THREE.Color(0xffffff);
-    for (const mat of treeFoliageMats) {
-      mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.7);
+    for (const mat of treeTopMats) {
+      mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.75);
     }
   } else if (weather === 'rain') {
     accumulation = Math.min(1, accumulation + 0.0005);
@@ -1083,13 +1089,13 @@ function animate() {
       snowGroundMat.opacity = accumulation * 0.85;
       puddles.forEach(p => { p.material.opacity = accumulation * 0.7; });
       const snowWhite = new THREE.Color(0xffffff);
-      for (const mat of treeFoliageMats) {
-        mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.7);
+      for (const mat of treeTopMats) {
+        mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.75);
       }
       if (accumulation <= 0) {
         snowGround.visible = false;
         puddles.forEach(p => { p.visible = false; });
-        for (const mat of treeFoliageMats) {
+        for (const mat of treeTopMats) {
           mat.color.copy(mat.userData.originalColor);
         }
       }
