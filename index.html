@@ -718,7 +718,11 @@ function animate() {
     fp[i * 3] += fireVelocities[i].x + (windStrength * 0.0001);
     fp[i * 3 + 1] += fireVelocities[i].y;
     fp[i * 3 + 2] += fireVelocities[i].z;
-    if (fp[i * 3 + 1] > 1.0) {
+    const height = fp[i * 3 + 1];
+    const taper = 0.03 * height;
+    fp[i * 3] -= fp[i * 3] * taper;
+    fp[i * 3 + 2] -= fp[i * 3 + 2] * taper;
+    if (height > 1.0) {
       fp[i * 3] = (Math.random() - 0.5) * 0.7;
       fp[i * 3 + 1] = 0;
       fp[i * 3 + 2] = (Math.random() - 0.5) * 0.7;
