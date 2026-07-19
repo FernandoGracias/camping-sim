@@ -61,7 +61,16 @@ canvas { display: block; }
   </div>
   <div class="control-row">
     <label>Tent Color</label>
-    <input type="color" id="tent-color" value="#cc5522" style="width:100%;height:24px;border:none;cursor:pointer;">
+    <div id="tent-colors" style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button data-color="cc5522" style="background:#cc5522;width:24px;height:24px;border:2px solid #fff;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="2266aa" style="background:#2266aa;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="337733" style="background:#337733;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="aa2222" style="background:#aa2222;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="888888" style="background:#888888;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="ddaa22" style="background:#ddaa22;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="553388" style="background:#553388;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="222222" style="background:#222222;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+    </div>
   </div>
   <div class="control-row">
     <label>Tent Style</label>
@@ -870,7 +879,7 @@ btnRain.addEventListener('click', () => setWeather('rain'));
 btnSnow.addEventListener('click', () => setWeather('snow'));
 
 // --- TENT CONTROLS ---
-const tentColorInput = document.getElementById('tent-color');
+const tentColorsDiv = document.getElementById('tent-colors');
 const tentStyleSelect = document.getElementById('tent-style');
 
 function rebuildTent() {
@@ -879,8 +888,12 @@ function rebuildTent() {
   scene.add(currentTent);
 }
 
-tentColorInput.addEventListener('input', (e) => {
-  tentColor = parseInt(e.target.value.slice(1), 16);
+tentColorsDiv.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-color]');
+  if (!btn) return;
+  tentColor = parseInt(btn.dataset.color, 16);
+  tentColorsDiv.querySelectorAll('button').forEach(b => b.style.borderColor = 'transparent');
+  btn.style.borderColor = '#fff';
   rebuildTent();
 });
 
@@ -938,7 +951,7 @@ function animate() {
       camera.position.addScaledVector(dir, zoomSpeed);
     }
   }
-  if (keys['s']) {
+  if (keys['s'] && !keys['shift']) {
     const dist = camera.position.distanceTo(controls.target);
     if (dist < controls.maxDistance - zoomSpeed) {
       const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
