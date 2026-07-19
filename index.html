@@ -306,8 +306,7 @@ function buildCreek() {
 scene.add(buildCreek());
 
 // --- TREES ---
-const treeTopMats = [];
-const treeBotMats = [];
+const snowCaps = [];
 
 function makeTree(x, z, height, trunkRadius) {
   const group = new THREE.Group();
@@ -330,18 +329,20 @@ function makeTree(x, z, height, trunkRadius) {
       color: originalColor.clone(),
       roughness: 0.8,
     });
-    coneMat.userData = { originalColor: originalColor.clone() };
-    const isTopHalf = i >= Math.floor(foliageLayers / 2);
-    if (isTopHalf) {
-      treeTopMats.push(coneMat);
-    } else {
-      treeBotMats.push(coneMat);
-    }
     const cone = new THREE.Mesh(coneGeo, coneMat);
     cone.position.y = layerY;
     cone.rotation.y = Math.random() * Math.PI;
     cone.castShadow = true;
     group.add(cone);
+
+    const capGeo = new THREE.ConeGeometry(layerRadius * 0.95, layerHeight * 0.5, 7);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = layerY + layerHeight * 0.25;
+    cap.rotation.y = cone.rotation.y;
+    cap.visible = false;
+    group.add(cap);
+    snowCaps.push(cap);
   }
 
   group.position.set(x, getGroundY(x, z), z);
@@ -1073,10 +1074,11 @@ function animate() {
     accumulation = Math.min(1, accumulation + 0.0003);
     snowGround.visible = true;
     snowGroundMat.opacity = accumulation * 0.85;
-    const snowWhite = new THREE.Color(0xffffff);
-    for (const mat of treeTopMats) {
-      mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.75);
+    for (const cap of snowCaps) {
+      cap.visible = true;
+      cap.material.opacity = accumulation * 0.9;
     }
+    snowCaps.forEach(m => { if (m.material.opacity > 0) m.visible = true; });
   } else if (weather === 'rain') {
     accumulation = Math.min(1, accumulation + 0.0005);
     puddles.forEach(p => {
@@ -1088,16 +1090,13 @@ function animate() {
       accumulation = Math.max(0, accumulation - 0.0002);
       snowGroundMat.opacity = accumulation * 0.85;
       puddles.forEach(p => { p.material.opacity = accumulation * 0.7; });
-      const snowWhite = new THREE.Color(0xffffff);
-      for (const mat of treeTopMats) {
-        mat.color.copy(mat.userData.originalColor).lerp(snowWhite, accumulation * 0.75);
+      for (const cap of snowCaps) {
+        cap.material.opacity = accumulation * 0.9;
       }
       if (accumulation <= 0) {
         snowGround.visible = false;
         puddles.forEach(p => { p.visible = false; });
-        for (const mat of treeTopMats) {
-          mat.color.copy(mat.userData.originalColor);
-        }
+        snowCaps.forEach(c => { c.material.opacity = 0; c.visible = false; });
       }
     }
   }
