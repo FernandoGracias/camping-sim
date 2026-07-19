@@ -308,6 +308,7 @@ scene.add(buildCreek());
 
 // --- TREES ---
 const snowCaps = [];
+const treeFoliageCones = [];
 
 function makeTree(x, z, height, trunkRadius) {
   const group = new THREE.Group();
@@ -324,27 +325,33 @@ function makeTree(x, z, height, trunkRadius) {
     const layerRadius = (height * 0.18) * (1 - i * 0.12);
     const layerY = height * 0.4 + i * layerHeight * 0.7;
     const coneGeo = new THREE.ConeGeometry(layerRadius, layerHeight, 7);
+    coneGeo.computeVertexNormals();
+
     const shade = 0.3 + Math.random() * 0.15;
-    const originalColor = new THREE.Color(shade * 0.4, shade, shade * 0.3);
+    const greenColor = new THREE.Color(shade * 0.4, shade, shade * 0.3);
+
+    const colors = new Float32Array(coneGeo.attributes.position.count * 3);
+    const normals = coneGeo.attributes.normal;
+    for (let v = 0; v < normals.count; v++) {
+      const ny = normals.getY(v);
+      colors[v * 3] = greenColor.r;
+      colors[v * 3 + 1] = greenColor.g;
+      colors[v * 3 + 2] = greenColor.b;
+    }
+    coneGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
     const coneMat = new THREE.MeshStandardMaterial({
-      color: originalColor.clone(),
+      vertexColors: true,
       roughness: 0.8,
     });
+    coneMat.userData = { greenColor: greenColor.clone() };
+
     const cone = new THREE.Mesh(coneGeo, coneMat);
     cone.position.y = layerY;
     cone.rotation.y = Math.random() * Math.PI;
     cone.castShadow = true;
     group.add(cone);
-
-    const capGeo = new THREE.ConeGeometry(layerRadius * 1.02, layerHeight * 0.65, 7, 1, true, 0, Math.PI * 2);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = layerY - layerHeight * 0.175;
-    cap.rotation.y = cone.rotation.y;
-    cap.visible = false;
-    cap.renderOrder = 1;
-    group.add(cap);
-    snowCaps.push(cap);
+    treeFoliageCones.push(cone);
   }
 
   group.position.set(x, getGroundY(x, z), z);
@@ -1076,11 +1083,25 @@ function animate() {
     accumulation = Math.min(1, accumulation + 0.0003);
     snowGround.visible = true;
     snowGroundMat.opacity = accumulation * 0.85;
-    for (const cap of snowCaps) {
-      cap.visible = true;
-      cap.material.opacity = accumulation * 0.9;
+    const white = new THREE.Color(1, 1, 1);
+    for (const cone of treeFoliageCones) {
+      const geo = cone.geometry;
+      const colors = geo.attributes.color;
+      const normals = geo.attributes.normal;
+      const green = cone.material.userData.greenColor;
+      for (let v = 0; v < normals.count; v++) {
+        const ny = normals.getY(v);
+        if (ny > 0.15) {
+          const t = accumulation * Math.min(1, (ny - 0.15) * 2);
+          colors.setXYZ(v,
+            green.r + (1 - green.r) * t,
+            green.g + (1 - green.g) * t,
+            green.b + (1 - green.b) * t
+          );
+        }
+      }
+      colors.needsUpdate = true;
     }
-    snowCaps.forEach(m => { if (m.material.opacity > 0) m.visible = true; });
   } else if (weather === 'rain') {
     accumulation = Math.min(1, accumulation + 0.0005);
     puddles.forEach(p => {
@@ -1092,13 +1113,27 @@ function animate() {
       accumulation = Math.max(0, accumulation - 0.0002);
       snowGroundMat.opacity = accumulation * 0.85;
       puddles.forEach(p => { p.material.opacity = accumulation * 0.7; });
-      for (const cap of snowCaps) {
-        cap.material.opacity = accumulation * 0.9;
+      for (const cone of treeFoliageCones) {
+        const geo = cone.geometry;
+        const colors = geo.attributes.color;
+        const normals = geo.attributes.normal;
+        const green = cone.material.userData.greenColor;
+        for (let v = 0; v < normals.count; v++) {
+          const ny = normals.getY(v);
+          if (ny > 0.15) {
+            const t = accumulation * Math.min(1, (ny - 0.15) * 2);
+            colors.setXYZ(v,
+              green.r + (1 - green.r) * t,
+              green.g + (1 - green.g) * t,
+              green.b + (1 - green.b) * t
+            );
+          }
+        }
+        colors.needsUpdate = true;
       }
       if (accumulation <= 0) {
         snowGround.visible = false;
         puddles.forEach(p => { p.visible = false; });
-        snowCaps.forEach(c => { c.material.opacity = 0; c.visible = false; });
       }
     }
   }
