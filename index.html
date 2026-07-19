@@ -1082,7 +1082,7 @@ function animate() {
   }
 
   if (weather === 'snow') {
-    accumulation = Math.min(1, accumulation + 0.0003);
+    accumulation = Math.min(1, accumulation + 0.001);
     snowGround.visible = true;
     snowGroundMat.opacity = accumulation * 0.85;
     const white = new THREE.Color(1, 1, 1);
