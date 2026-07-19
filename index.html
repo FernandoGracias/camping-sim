@@ -174,39 +174,52 @@ function buildCreek() {
   ];
 
   function makeRibbonGeo(pts, width, yOffset) {
+    const subdivisions = 6;
+    const allPts = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      for (let s = 0; s < subdivisions; s++) {
+        const t = s / subdivisions;
+        allPts.push(new THREE.Vector2(
+          pts[i].x + (pts[i + 1].x - pts[i].x) * t,
+          pts[i].y + (pts[i + 1].y - pts[i].y) * t,
+        ));
+      }
+    }
+    allPts.push(pts[pts.length - 1]);
+
     const normals = [];
-    for (let i = 0; i < pts.length; i++) {
+    for (let i = 0; i < allPts.length; i++) {
       let dx, dz;
       if (i === 0) {
-        dx = pts[1].x - pts[0].x;
-        dz = pts[1].y - pts[0].y;
-      } else if (i === pts.length - 1) {
-        dx = pts[i].x - pts[i - 1].x;
-        dz = pts[i].y - pts[i - 1].y;
+        dx = allPts[1].x - allPts[0].x;
+        dz = allPts[1].y - allPts[0].y;
+      } else if (i === allPts.length - 1) {
+        dx = allPts[i].x - allPts[i - 1].x;
+        dz = allPts[i].y - allPts[i - 1].y;
       } else {
-        dx = pts[i + 1].x - pts[i - 1].x;
-        dz = pts[i + 1].y - pts[i - 1].y;
+        dx = allPts[i + 1].x - allPts[i - 1].x;
+        dz = allPts[i + 1].y - allPts[i - 1].y;
       }
       const len = Math.sqrt(dx * dx + dz * dz);
       normals.push({ x: -dz / len, z: dx / len });
     }
 
     const positions = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const x0 = pts[i].x, z0 = pts[i].y;
-      const x1 = pts[i + 1].x, z1 = pts[i + 1].y;
+    for (let i = 0; i < allPts.length - 1; i++) {
+      const x0 = allPts[i].x, z0 = allPts[i].y;
+      const x1 = allPts[i + 1].x, z1 = allPts[i + 1].y;
       const n0 = normals[i], n1 = normals[i + 1];
       const ax = x0 - n0.x * width, az = z0 - n0.z * width;
       const bx = x0 + n0.x * width, bz = z0 + n0.z * width;
       const cx = x1 + n1.x * width, cz = z1 + n1.z * width;
-      const dx2 = x1 - n1.x * width, dz2 = z1 - n1.z * width;
+      const ex = x1 - n1.x * width, ez = z1 - n1.z * width;
       positions.push(
         ax, getGroundY(ax, az) + yOffset, az,
         bx, getGroundY(bx, bz) + yOffset, bz,
         cx, getGroundY(cx, cz) + yOffset, cz,
         ax, getGroundY(ax, az) + yOffset, az,
         cx, getGroundY(cx, cz) + yOffset, cz,
-        dx2, getGroundY(dx2, dz2) + yOffset, dz2,
+        ex, getGroundY(ex, ez) + yOffset, ez,
       );
     }
     const geo = new THREE.BufferGeometry();
@@ -353,16 +366,25 @@ scene.add(buildTent());
 // --- CAMPFIRE ---
 const fireGroup = new THREE.Group();
 
-for (let i = 0; i < 12; i++) {
-  const rockGeo = new THREE.SphereGeometry(0.12 + Math.random() * 0.08, 5, 4);
+for (let i = 0; i < 14; i++) {
+  const size = 0.08 + Math.random() * 0.12;
+  const segments = 3 + Math.floor(Math.random() * 4);
+  const rockGeo = new THREE.SphereGeometry(size, segments, segments);
+  const shade = 0.25 + Math.random() * 0.25;
   const rockMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0.3 + Math.random() * 0.1, 0.28 + Math.random() * 0.1, 0.25),
-    roughness: 1.0,
+    color: new THREE.Color(shade + Math.random() * 0.05, shade, shade - Math.random() * 0.03),
+    roughness: 0.8 + Math.random() * 0.2,
   });
   const rock = new THREE.Mesh(rockGeo, rockMat);
-  const a = (i / 12) * Math.PI * 2;
-  rock.position.set(Math.cos(a) * 0.65, 0.08, Math.sin(a) * 0.65);
-  rock.scale.y = 0.6;
+  const a = (i / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+  const dist = 0.55 + Math.random() * 0.2;
+  rock.position.set(Math.cos(a) * dist, size * 0.4, Math.sin(a) * dist);
+  rock.scale.set(
+    0.8 + Math.random() * 0.5,
+    0.4 + Math.random() * 0.4,
+    0.8 + Math.random() * 0.5
+  );
+  rock.rotation.set(Math.random() * 0.4, Math.random() * Math.PI, Math.random() * 0.4);
   rock.castShadow = true;
   fireGroup.add(rock);
 }
