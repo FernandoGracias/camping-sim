@@ -128,18 +128,24 @@ scene.add(fireLight2);
 scene.fog = new THREE.FogExp2(0x88aacc, 0.0);
 
 // --- TERRAIN ---
-const groundGeo = new THREE.CircleGeometry(40, 64);
+const WORLD_RADIUS = 80;
+const groundGeo = new THREE.SphereGeometry(WORLD_RADIUS, 64, 64, 0, Math.PI * 2, 0, Math.PI / 3);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a2a, roughness: 0.9 });
 const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.rotation.x = -Math.PI / 2;
+ground.position.y = -WORLD_RADIUS;
 ground.receiveShadow = true;
 scene.add(ground);
+
+function getGroundY(x, z) {
+  const dist = Math.sqrt(x * x + z * z);
+  return Math.sqrt(Math.max(0, WORLD_RADIUS * WORLD_RADIUS - dist * dist)) - WORLD_RADIUS;
+}
 
 const clearingGeo = new THREE.CircleGeometry(6, 32);
 const clearingMat = new THREE.MeshStandardMaterial({ color: 0x5a6b3a, roughness: 1.0 });
 const clearing = new THREE.Mesh(clearingGeo, clearingMat);
 clearing.rotation.x = -Math.PI / 2;
-clearing.position.y = 0.01;
+clearing.position.y = 0.02;
 clearing.receiveShadow = true;
 scene.add(clearing);
 
@@ -167,7 +173,7 @@ function buildCreek() {
     new THREE.Vector2(50, 8),
   ];
 
-  function makeRibbonGeo(pts, width, yPos) {
+  function makeRibbonGeo(pts, width, yOffset) {
     const normals = [];
     for (let i = 0; i < pts.length; i++) {
       let dx, dz;
@@ -190,13 +196,17 @@ function buildCreek() {
       const x0 = pts[i].x, z0 = pts[i].y;
       const x1 = pts[i + 1].x, z1 = pts[i + 1].y;
       const n0 = normals[i], n1 = normals[i + 1];
+      const ax = x0 - n0.x * width, az = z0 - n0.z * width;
+      const bx = x0 + n0.x * width, bz = z0 + n0.z * width;
+      const cx = x1 + n1.x * width, cz = z1 + n1.z * width;
+      const dx2 = x1 - n1.x * width, dz2 = z1 - n1.z * width;
       positions.push(
-        x0 - n0.x * width, yPos, z0 - n0.z * width,
-        x0 + n0.x * width, yPos, z0 + n0.z * width,
-        x1 + n1.x * width, yPos, z1 + n1.z * width,
-        x0 - n0.x * width, yPos, z0 - n0.z * width,
-        x1 + n1.x * width, yPos, z1 + n1.z * width,
-        x1 - n1.x * width, yPos, z1 - n1.z * width,
+        ax, getGroundY(ax, az) + yOffset, az,
+        bx, getGroundY(bx, bz) + yOffset, bz,
+        cx, getGroundY(cx, cz) + yOffset, cz,
+        ax, getGroundY(ax, az) + yOffset, az,
+        cx, getGroundY(cx, cz) + yOffset, cz,
+        dx2, getGroundY(dx2, dz2) + yOffset, dz2,
       );
     }
     const geo = new THREE.BufferGeometry();
@@ -205,13 +215,13 @@ function buildCreek() {
     return geo;
   }
 
-  const bankGeo = makeRibbonGeo(points, 1.8, 0.02);
+  const bankGeo = makeRibbonGeo(points, 1.8, 0.05);
   const bankMat = new THREE.MeshStandardMaterial({ color: 0x7a6a45, roughness: 1.0, side: THREE.DoubleSide });
   const bank = new THREE.Mesh(bankGeo, bankMat);
   bank.receiveShadow = true;
   creekGroup.add(bank);
 
-  const waterGeo = makeRibbonGeo(points, 0.9, 0.04);
+  const waterGeo = makeRibbonGeo(points, 0.9, 0.08);
   const waterMat = new THREE.MeshStandardMaterial({
     color: 0x4499bb,
     roughness: 0.2,
@@ -224,16 +234,29 @@ function buildCreek() {
   water.receiveShadow = true;
   creekGroup.add(water);
 
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 18; i++) {
     const idx = Math.floor(Math.random() * (points.length - 1));
     const t = Math.random();
     const px = points[idx].x + (points[idx + 1].x - points[idx].x) * t;
-    const pz = points[idx].y + (points[idx + 1].y - points[idx].y) * t + (Math.random() - 0.5) * 2.5;
-    const rockGeo = new THREE.SphereGeometry(0.15 + Math.random() * 0.2, 5, 4);
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x666655, roughness: 1.0 });
+    const pz = points[idx].y + (points[idx + 1].y - points[idx].y) * t + (Math.random() - 0.5) * 2.8;
+    const size = 0.1 + Math.random() * 0.3;
+    const segments = 3 + Math.floor(Math.random() * 4);
+    const rockGeo = new THREE.SphereGeometry(size, segments, segments);
+    const shade = 0.35 + Math.random() * 0.3;
+    const warmth = Math.random() * 0.08;
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(shade + warmth, shade, shade - warmth * 0.5),
+      roughness: 0.85 + Math.random() * 0.15,
+    });
     const rock = new THREE.Mesh(rockGeo, rockMat);
-    rock.position.set(px, 0.08, pz);
-    rock.scale.y = 0.5;
+    const gy = getGroundY(px, pz);
+    rock.position.set(px, gy + size * 0.3, pz);
+    rock.scale.set(
+      0.7 + Math.random() * 0.6,
+      0.3 + Math.random() * 0.5,
+      0.7 + Math.random() * 0.6
+    );
+    rock.rotation.set(Math.random() * 0.3, Math.random() * Math.PI * 2, Math.random() * 0.3);
     rock.castShadow = true;
     creekGroup.add(rock);
   }
@@ -270,7 +293,7 @@ function makeTree(x, z, height, trunkRadius) {
     group.add(cone);
   }
 
-  group.position.set(x, 0, z);
+  group.position.set(x, getGroundY(x, z), z);
   group.rotation.y = Math.random() * Math.PI * 2;
   return group;
 }
