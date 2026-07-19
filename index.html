@@ -154,18 +154,48 @@ scene.add(dirt);
 // --- CREEK ---
 function buildCreek() {
   const creekGroup = new THREE.Group();
-  const creekPath = new THREE.CurvePath();
   const points = [
-    new THREE.Vector3(-25, 0.03, 10),
-    new THREE.Vector3(-15, 0.03, 9),
-    new THREE.Vector3(-8, 0.03, 8.5),
-    new THREE.Vector3(0, 0.03, 9),
-    new THREE.Vector3(8, 0.03, 10),
-    new THREE.Vector3(18, 0.03, 11),
-    new THREE.Vector3(30, 0.03, 12),
+    new THREE.Vector2(-25, 10),
+    new THREE.Vector2(-15, 9),
+    new THREE.Vector2(-8, 8.5),
+    new THREE.Vector2(0, 9),
+    new THREE.Vector2(8, 10),
+    new THREE.Vector2(18, 11),
+    new THREE.Vector2(30, 12),
   ];
-  const curve = new THREE.CatmullRomCurve3(points);
-  const tubeGeo = new THREE.TubeGeometry(curve, 40, 0.6, 8, false);
+
+  function makeRibbonGeo(pts, width) {
+    const positions = [];
+    const uvs = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const dx = pts[i + 1].x - pts[i].x;
+      const dz = pts[i + 1].y - pts[i].y;
+      const len = Math.sqrt(dx * dx + dz * dz);
+      const nx = -dz / len * width;
+      const nz = dx / len * width;
+      const x0 = pts[i].x, z0 = pts[i].y;
+      const x1 = pts[i + 1].x, z1 = pts[i + 1].y;
+      positions.push(x0 + nx, 0.03, z0 + nz);
+      positions.push(x0 - nx, 0.03, z0 - nz);
+      positions.push(x1 + nx, 0.03, z1 + nz);
+      positions.push(x1 - nx, 0.03, z1 - nz);
+      positions.push(x1 + nx, 0.03, z1 + nz);
+      positions.push(x0 - nx, 0.03, z0 - nz);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }
+
+  const bankGeo = makeRibbonGeo(points, 1.4);
+  const bankMat = new THREE.MeshStandardMaterial({ color: 0x4a3a22, roughness: 1.0 });
+  const bank = new THREE.Mesh(bankGeo, bankMat);
+  bank.position.y = -0.01;
+  bank.receiveShadow = true;
+  creekGroup.add(bank);
+
+  const waterGeo = makeRibbonGeo(points, 0.7);
   const waterMat = new THREE.MeshStandardMaterial({
     color: 0x3388aa,
     roughness: 0.2,
@@ -173,15 +203,9 @@ function buildCreek() {
     transparent: true,
     opacity: 0.7,
   });
-  const creek = new THREE.Mesh(tubeGeo, waterMat);
-  creekGroup.add(creek);
-
-  const bankCurve = new THREE.CatmullRomCurve3(points);
-  const bankGeo = new THREE.TubeGeometry(bankCurve, 40, 1.2, 8, false);
-  const bankMat = new THREE.MeshStandardMaterial({ color: 0x4a3a22, roughness: 1.0 });
-  const bank = new THREE.Mesh(bankGeo, bankMat);
-  bank.position.y = -0.05;
-  creekGroup.add(bank);
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.receiveShadow = true;
+  creekGroup.add(water);
 
   return creekGroup;
 }
@@ -254,16 +278,28 @@ function buildTent() {
   tent.receiveShadow = true;
   tentGroup.add(tent);
 
-  const flyGeo = new THREE.PlaneGeometry(4.5, 3.5);
+  const flyShape = new THREE.BufferGeometry();
+  const flyVerts = new Float32Array([
+    -2.0, 2.15, -0.2,
+    0.0, 0.1, -1.8,
+    0.0, 0.1, 1.4,
+    -2.0, 2.15, -0.2,
+    0.0, 0.1, 1.4,
+    -4.0, 0.1, -0.2,
+    -2.0, 2.15, -0.2,
+    -4.0, 0.1, -0.2,
+    0.0, 0.1, -1.8,
+  ]);
+  flyShape.setAttribute('position', new THREE.BufferAttribute(flyVerts, 3));
+  flyShape.computeVertexNormals();
   const flyMat = new THREE.MeshStandardMaterial({
     color: 0x886633,
     roughness: 0.6,
     side: THREE.DoubleSide,
   });
-  const fly = new THREE.Mesh(flyGeo, flyMat);
-  fly.position.set(-3, 2.1, -0.6);
-  fly.rotation.x = -Math.PI / 2;
-  fly.rotation.z = -Math.PI / 4;
+  const fly = new THREE.Mesh(flyShape, flyMat);
+  fly.position.set(-2, 0, -1);
+  fly.rotation.y = -Math.PI / 4;
   fly.castShadow = true;
   tentGroup.add(fly);
 
