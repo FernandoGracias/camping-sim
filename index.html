@@ -70,6 +70,7 @@ canvas { display: block; }
       <button data-color="ddaa22" style="background:#ddaa22;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
       <button data-color="553388" style="background:#553388;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
       <button data-color="222222" style="background:#222222;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
+      <button data-color="ee66aa" style="background:#ee66aa;width:24px;height:24px;border:2px solid transparent;border-radius:4px;cursor:pointer;"></button>
     </div>
   </div>
   <div class="control-row">
@@ -335,7 +336,7 @@ function makeTree(x, z, height, trunkRadius) {
     cone.castShadow = true;
     group.add(cone);
 
-    const capGeo = new THREE.RingGeometry(layerRadius * 0.25, layerRadius * 0.98, 7);
+    const capGeo = new THREE.RingGeometry(layerRadius * 0.05, layerRadius * 0.98, 7);
     const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, transparent: true, opacity: 0, side: THREE.DoubleSide });
     const cap = new THREE.Mesh(capGeo, capMat);
     cap.rotation.x = -Math.PI / 2;
