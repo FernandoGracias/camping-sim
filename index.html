@@ -60,6 +60,10 @@ canvas { display: block; }
     <input type="range" id="fog-slider" min="0" max="100" step="1" value="0">
   </div>
   <div class="control-row">
+    <label>Moonlight</label>
+    <input type="range" id="moonlight-slider" min="0" max="100" step="1" value="50">
+  </div>
+  <div class="control-row">
     <label>Tent Color</label>
     <div id="tent-colors" style="display:flex;gap:4px;flex-wrap:wrap;">
       <button data-color="cc5522" style="background:#cc5522;width:24px;height:24px;border:2px solid #fff;border-radius:4px;cursor:pointer;"></button>
@@ -134,6 +138,7 @@ let timeOfDay = 13.0;
 let weather = 'clear';
 let windStrength = 10;
 let fogDensity = 0;
+let moonlightStrength = 0.5;
 
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
 sunLight.castShadow = true;
@@ -142,6 +147,7 @@ sunLight.shadow.camera.left = -20;
 sunLight.shadow.camera.right = 20;
 sunLight.shadow.camera.top = 20;
 sunLight.shadow.camera.bottom = -20;
+sunLight.shadow.bias = -0.001;
 scene.add(sunLight);
 
 const moonLight = new THREE.DirectionalLight(0x4466aa, 0.15);
@@ -149,6 +155,9 @@ scene.add(moonLight);
 
 const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
 scene.add(ambientLight);
+
+const hemiLight = new THREE.HemisphereLight(0x88aadd, 0x445522, 0.4);
+scene.add(hemiLight);
 
 const fireLight = new THREE.PointLight(0xff6622, 2, 12);
 fireLight.position.set(0, 1.2, 0);
@@ -420,7 +429,8 @@ function buildTent(style, color) {
     tentGroup.add(mesh);
   } else if (style === 'dome') {
     const geo = new THREE.SphereGeometry(1.8, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-    const mesh = new THREE.Mesh(geo, mat);
+    const mesh = new THREE.Mesh(geo, mat.clone());
+    mesh.material.side = THREE.DoubleSide;
     mesh.position.set(-3, groundY, -2);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -445,6 +455,7 @@ function buildTent(style, color) {
     roofShape.lineTo(1.8, 0);
     roofShape.closePath();
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: 2.8, bevelEnabled: false });
+    roofGeo.translate(0, 0, -1.4);
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 });
     const roof = new THREE.Mesh(roofGeo, roofMat);
     roof.position.set(-3, groundY + 2.0, -2);
@@ -852,8 +863,10 @@ function updateLighting() {
   }
 
   const isNight = hour < 5.5 || hour > 21.5;
-  moonLight.intensity = isNight ? 0.2 : 0;
-  ambientLight.intensity = 0.15 + sunIntensity * 0.4;
+  const moonBase = isNight ? 0.4 : (hour < 7 || hour > 20.5 ? 0.2 : 0.05);
+  moonLight.intensity = moonBase * moonlightStrength;
+  ambientLight.intensity = 0.3 + sunIntensity * 0.5;
+  hemiLight.intensity = 0.2 + sunIntensity * 0.3;
 
   const fireBrightness = isNight ? 3.0 : (hour < 7.5 || hour > 20 ? 2.0 : 1.0);
   fireLight.intensity = fireBrightness;
@@ -882,6 +895,11 @@ windSlider.addEventListener('input', (e) => { windStrength = parseInt(e.target.v
 fogSlider.addEventListener('input', (e) => {
   fogDensity = parseInt(e.target.value);
   scene.fog.density = fogDensity * 0.001;
+});
+
+const moonlightSlider = document.getElementById('moonlight-slider');
+moonlightSlider.addEventListener('input', (e) => {
+  moonlightStrength = parseInt(e.target.value) / 100;
 });
 
 function setWeather(w) {
